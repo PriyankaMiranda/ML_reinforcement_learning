@@ -2,18 +2,31 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class my_data:
-	def __init__(self, data_quality):
+	def __init__(self, data_quality, max_data_quality):
 		self.data_quality = data_quality # data quality of the dataset
-		self.avg_data_quality = 0 
+		self.avg_data_quality = 0
 		self.N = 0 # nunmber of time the dataset is fetched 
 
 	def get_data(self):
-		print("Data quality : "+str(self.data_quality))	
 		return np.random.randn() + self.data_quality # gaussian with unit variance
 
 	def update_set_params(self, new_data_val):# latest sample received from the exp
 		self.N += 1
 		self.avg_data_quality = (1 - 1.0/self.N)*self.avg_data_quality + new_data_val/self.N
+
+class my_data_optimistic:
+	def __init__(self, data_quality, max_data_quality):
+		self.data_quality = data_quality # data quality of the dataset
+		self.avg_data_quality = max_data_quality
+		self.N = 1 # nunmber of time the dataset is fetched 
+
+	def get_data(self):
+		return np.random.randn() + self.data_quality # gaussian with unit variance
+
+	def update_set_params(self, new_data_val):# latest sample received from the exp
+		self.N += 1
+		self.avg_data_quality = (1 - 1.0/self.N)*self.avg_data_quality + new_data_val/self.N
+
 
 def select_best_sets(dataset_labels, num_of_good_sets):
 	np.random.shuffle(dataset_labels)
@@ -26,14 +39,12 @@ def create_datasets(N):
 	return dataset_labels
 
 def exp(total_num_of_sets, num_of_good_sets, num_of_tries, eps, max_data_quality, min_data_quality, variance):
-	print("Suppose we have n datasets : a1, a2 ... Default value n = 5.")
+
 	dataset_labels = create_datasets(total_num_of_sets)
 	data = np.empty(num_of_tries)
-	print("Among these, we randomly assign x of these as the ones that produce the best results. Default value x = 2")
 	good_dataset = select_best_sets(dataset_labels, num_of_good_sets)
-	print("PS. We know that these datasets "+str(good_dataset)+" are meant to produce the best results.")
-	print("Let us observe and understand how the algorithm determines that without using many tries")
 	my_datasets = []
+	my_datasets2 = []
 	my_data_qualities = []
 	for x in range(0,total_num_of_sets):
 		if (x in good_dataset):
@@ -45,41 +56,31 @@ def exp(total_num_of_sets, num_of_good_sets, num_of_tries, eps, max_data_quality
 			while(data_quality in my_data_qualities):
 				data_quality = min_data_quality + np.random.randint(low=0, high=variance)
 		my_data_qualities.append(data_quality)
-		my_datasets.append(my_data(data_quality)) 
-	
-	my_datasets_copies = []
-	for x in range(0,len(eps)):
-		my_datasets_copies.append(my_datasets)
-	
-	print("If randomly generated epsilon < eps, We choose randomly among the datasets.")
-	print("Else if randomly generated epsilon > eps, We choose the one with the best average data quality")
-	print("Number of tries we currently have to make sure we use the best data: "+str(num_of_tries))
-	
+		my_datasets.append(my_data(data_quality,max_data_quality))
+		my_datasets2.append(my_data_optimistic(data_quality,max_data_quality)) 
 
-	dataset_selected = np.empty(len(eps)) # current dataset is selected n different times based on eps values
-	data = np.zeros(shape=(len(eps),num_of_tries)) # 2d array for n different eps trials and the number of tries
+	data = np.zeros(shape=(2,num_of_tries)) # 2d array for n different eps trials and the number of tries
 
 	for i in range(num_of_tries):
 		rand_eps_val = np.random.random()*100
+		rand_dataset_selected = np.random.choice(total_num_of_sets)
+		if rand_eps_val < eps:
+			print("random data selected")
+			dataset_selected = rand_dataset_selected
+		else:
+			print("highest in current selected")
+			dataset_selected = np.argmax([curr_set.avg_data_quality for curr_set in my_datasets])
+		dataset_selected2 = np.argmax([curr_set.avg_data_quality for curr_set in my_datasets2])
 
-		rand_dataset_selected = np.random.choice(len(eps))
-		# print("Epsilon (ε) : "+str(rand_eps_val))
-		for x in range(0,len(eps)):
-			if rand_eps_val < eps[x]:
-				print("random data selected")
-				dataset_selected[x] = rand_dataset_selected
-			else:
-				print("highest in current selected")
-				dataset_selected[x] = np.argmax([curr_set.avg_data_quality for curr_set in my_datasets_copies[x]])
-			data[x][i] = my_datasets_copies[x][int(dataset_selected[x])].get_data()
-			my_datasets_copies[x][int(dataset_selected[x])].update_set_params(data[x][i])
+		data[0][i] = my_datasets[int(dataset_selected)].get_data()
+		data[1][i] = my_datasets2[int(dataset_selected2)].get_data()
+		my_datasets[int(dataset_selected)].update_set_params(data[0][i])
+		my_datasets2[int(dataset_selected2)].update_set_params(data[1][i])
 
-
-
-	for x in range(0,len(eps)):		
-		series_avg_accuracy = np.cumsum(data[x]) / (np.arange(num_of_tries) + 1)
-		# plot updated average accuracy as we explore datasets
-		plt.plot(series_avg_accuracy, label= 'epsilon = '+str(eps[x]))
+	series_avg_accuracy = np.cumsum(data[0]) / (np.arange(num_of_tries) + 1)
+	plt.plot(series_avg_accuracy, label= 'epsilon = '+str(eps)+', epsilon greedy')
+	series_avg_accuracy = np.cumsum(data[1]) / (np.arange(num_of_tries) + 1)
+	plt.plot(series_avg_accuracy, label= 'epsilon = '+str(eps)+', epsilon greedy optimistic')
 
 	for x in range(0,total_num_of_sets):
 		plt.plot(np.ones(num_of_tries)*my_data_qualities[x], 'r--')
@@ -87,8 +88,6 @@ def exp(total_num_of_sets, num_of_good_sets, num_of_tries, eps, max_data_quality
 	plt.legend()
 	# plt.xscale('log')
 	plt.show()
-
-
 
 def print_data_for_user(total_num_of_sets, num_of_good_sets, num_of_tries, eps, max_data_quality, min_data_quality, variance):
 	print("A simple experiment demonstrating epsilon-greedy algorithm")
@@ -105,14 +104,11 @@ if __name__ == '__main__':
 	#---constant params---
 	total_num_of_sets = 5
 	num_of_good_sets = 1
-	max_data_quality = 100
+	max_data_quality = 10
 	min_data_quality = 1
-	num_of_tries = 1000
-	variance = 5
-	#---------------------
-
-	#----varying parms---- 
-	eps = [90,50,20,10,5]
+	num_of_tries = 10000
+	variance = 5 
+	eps = 5
 	#---------------------
 	print_data_for_user(total_num_of_sets, num_of_good_sets,num_of_tries,eps, max_data_quality, min_data_quality, variance)
 	exp(total_num_of_sets, num_of_good_sets,num_of_tries,eps, max_data_quality, min_data_quality, variance)

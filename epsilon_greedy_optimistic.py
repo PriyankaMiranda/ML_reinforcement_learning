@@ -2,10 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class my_data:
-	def __init__(self, data_quality):
+	def __init__(self, data_quality, max_data_quality):
 		self.data_quality = data_quality # data quality of the dataset
-		self.avg_data_quality = 0 
-		self.N = 0 # nunmber of time the dataset is fetched 
+		self.avg_data_quality = max_data_quality
+		self.N = 1 # nunmber of time the dataset is fetched 
 
 	def get_data(self):
 		print("Data quality : "+str(self.data_quality))	
@@ -45,7 +45,7 @@ def exp(total_num_of_sets, num_of_good_sets, num_of_tries, eps, max_data_quality
 			while(data_quality in my_data_qualities):
 				data_quality = min_data_quality + np.random.randint(low=0, high=variance)
 		my_data_qualities.append(data_quality)
-		my_datasets.append(my_data(data_quality)) 
+		my_datasets.append(my_data(data_quality,max_data_quality)) 
 	
 	my_datasets_copies = []
 	for x in range(0,len(eps)):
@@ -65,12 +65,7 @@ def exp(total_num_of_sets, num_of_good_sets, num_of_tries, eps, max_data_quality
 		rand_dataset_selected = np.random.choice(len(eps))
 		# print("Epsilon (ε) : "+str(rand_eps_val))
 		for x in range(0,len(eps)):
-			if rand_eps_val < eps[x]:
-				print("random data selected")
-				dataset_selected[x] = rand_dataset_selected
-			else:
-				print("highest in current selected")
-				dataset_selected[x] = np.argmax([curr_set.avg_data_quality for curr_set in my_datasets_copies[x]])
+			dataset_selected[x] = np.argmax([curr_set.avg_data_quality for curr_set in my_datasets_copies[x]])
 			data[x][i] = my_datasets_copies[x][int(dataset_selected[x])].get_data()
 			my_datasets_copies[x][int(dataset_selected[x])].update_set_params(data[x][i])
 
@@ -90,6 +85,7 @@ def exp(total_num_of_sets, num_of_good_sets, num_of_tries, eps, max_data_quality
 
 
 
+
 def print_data_for_user(total_num_of_sets, num_of_good_sets, num_of_tries, eps, max_data_quality, min_data_quality, variance):
 	print("A simple experiment demonstrating epsilon-greedy algorithm")
 	print("-----------------Default values-----------------")
@@ -105,7 +101,7 @@ if __name__ == '__main__':
 	#---constant params---
 	total_num_of_sets = 5
 	num_of_good_sets = 1
-	max_data_quality = 100
+	max_data_quality = 10
 	min_data_quality = 1
 	num_of_tries = 1000
 	variance = 5
