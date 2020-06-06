@@ -45,6 +45,7 @@ def exp(total_num_of_sets, num_of_good_sets, num_of_tries, eps, max_data_quality
 	good_dataset = select_best_sets(dataset_labels, num_of_good_sets)
 	my_datasets = []
 	my_datasets2 = []
+	my_datasets3 = []
 	my_data_qualities = []
 	for x in range(0,total_num_of_sets):
 		if (x in good_dataset):
@@ -56,10 +57,17 @@ def exp(total_num_of_sets, num_of_good_sets, num_of_tries, eps, max_data_quality
 			while(data_quality in my_data_qualities):
 				data_quality = min_data_quality + np.random.randint(low=0, high=variance)
 		my_data_qualities.append(data_quality)
+
 		my_datasets.append(my_data(data_quality,max_data_quality))
 		my_datasets2.append(my_data_optimistic(data_quality,max_data_quality)) 
+		my_datasets3.append(my_data_optimistic(data_quality,max_data_quality)) 
 
-	data = np.zeros(shape=(2,num_of_tries)) # 2d array for n different eps trials and the number of tries
+	data = np.zeros(shape=(3,num_of_tries)) # 2d array for n different eps trials and the number of tries
+
+
+	for x in range(total_num_of_sets):
+		init_update = my_datasets3[x].get_data()
+		my_datasets3[x].update_set_params(init_update)
 
 	for i in range(num_of_tries):
 		rand_eps_val = np.random.random()*100
@@ -71,16 +79,22 @@ def exp(total_num_of_sets, num_of_good_sets, num_of_tries, eps, max_data_quality
 			print("highest in current selected")
 			dataset_selected = np.argmax([curr_set.avg_data_quality for curr_set in my_datasets])
 		dataset_selected2 = np.argmax([curr_set.avg_data_quality for curr_set in my_datasets2])
+		dataset_selected3 = np.argmax([curr_set.avg_data_quality + np.sqrt(2*np.log(i+(total_num_of_sets)) / curr_set.N) for curr_set in my_datasets3])# -----------------------------------
 
 		data[0][i] = my_datasets[int(dataset_selected)].get_data()
 		data[1][i] = my_datasets2[int(dataset_selected2)].get_data()
+		data[2][i] = my_datasets2[int(dataset_selected3)].get_data()
+		
 		my_datasets[int(dataset_selected)].update_set_params(data[0][i])
 		my_datasets2[int(dataset_selected2)].update_set_params(data[1][i])
+		my_datasets3[int(dataset_selected3)].update_set_params(data[2][i])
 
 	series_avg_accuracy = np.cumsum(data[0]) / (np.arange(num_of_tries) + 1)
 	plt.plot(series_avg_accuracy, label= 'epsilon = '+str(eps)+', epsilon greedy')
 	series_avg_accuracy = np.cumsum(data[1]) / (np.arange(num_of_tries) + 1)
 	plt.plot(series_avg_accuracy, label= 'epsilon = '+str(eps)+', epsilon greedy optimistic')
+	series_avg_accuracy = np.cumsum(data[2]) / (np.arange(num_of_tries) + 1)
+	plt.plot(series_avg_accuracy, label= 'epsilon = '+str(eps)+', chernoff hoeffding bound')
 
 	for x in range(0,total_num_of_sets):
 		plt.plot(np.ones(num_of_tries)*my_data_qualities[x], 'r--')
@@ -90,7 +104,7 @@ def exp(total_num_of_sets, num_of_good_sets, num_of_tries, eps, max_data_quality
 	plt.show()
 
 def print_data_for_user(total_num_of_sets, num_of_good_sets, num_of_tries, eps, max_data_quality, min_data_quality, variance):
-	print("A simple experiment demonstrating epsilon-greedy algorithm")
+	print("Epsilon-greedy algorithm VS  Optimistic initial values algorithm")
 	print("-----------------Default values-----------------")
 	print("Number of datasets: "+str(total_num_of_sets))
 	print("Number of good datasets: "+str(num_of_good_sets))
@@ -106,7 +120,7 @@ if __name__ == '__main__':
 	num_of_good_sets = 1
 	max_data_quality = 10
 	min_data_quality = 1
-	num_of_tries = 10000
+	num_of_tries = 100000
 	variance = 5 
 	eps = 5
 	#---------------------

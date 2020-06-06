@@ -105,7 +105,7 @@ if __name__ == '__main__':
 	#---constant params---
 	total_num_of_sets = 5
 	num_of_good_sets = 1
-	max_data_quality = 100
+	max_data_quality = 10
 	min_data_quality = 1
 	num_of_tries = 1000
 	variance = 5

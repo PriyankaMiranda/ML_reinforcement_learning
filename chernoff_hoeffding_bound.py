@@ -2,14 +2,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class my_data:
-	def __init__(self, data_quality, max_data_quality):
+	def __init__(self, data_quality):
 		self.data_quality = data_quality # data quality of the dataset
-		self.avg_data_quality = max_data_quality
-		self.N = 1 # nunmber of time the dataset is fetched 
+		self.avg_data_quality = 0 
+		self.N = 0 # nunmber of time the dataset is fetched 
 
 	def get_data(self):
-		print("Data quality : "+str(self.data_quality))	
-		return np.random.randn() + self.data_quality # gaussian with unit variance
+		return np.random.randn() + self.data_quality    # gaussian with unit variance
 
 	def update_set_params(self, new_data_val):# latest sample received from the exp
 		self.N += 1
@@ -35,6 +34,7 @@ def exp(total_num_of_sets, num_of_good_sets, num_of_tries, eps, max_data_quality
 	print("Let us observe and understand how the algorithm determines that without using many tries")
 	my_datasets = []
 	my_data_qualities = []
+
 	for x in range(0,total_num_of_sets):
 		if (x in good_dataset):
 			data_quality = max_data_quality - np.random.randint(low=0, high=variance)
@@ -45,7 +45,7 @@ def exp(total_num_of_sets, num_of_good_sets, num_of_tries, eps, max_data_quality
 			while(data_quality in my_data_qualities):
 				data_quality = min_data_quality + np.random.randint(low=0, high=variance)
 		my_data_qualities.append(data_quality)
-		my_datasets.append(my_data(data_quality,max_data_quality)) 
+		my_datasets.append(my_data(data_quality)) 
 	
 	my_datasets_copies = []
 	for x in range(0,len(eps)):
@@ -59,16 +59,19 @@ def exp(total_num_of_sets, num_of_good_sets, num_of_tries, eps, max_data_quality
 	dataset_selected = np.empty(len(eps)) # current dataset is selected n different times based on eps values
 	data = np.zeros(shape=(len(eps),num_of_tries)) # 2d array for n different eps trials and the number of tries
 
+	for x in range(0,len(eps)):
+		for y in range(total_num_of_sets):
+			init_update = my_datasets_copies[x][y].get_data()
+			my_datasets_copies[x][y].update_set_params(init_update)
+
 	for i in range(num_of_tries):
 		rand_eps_val = np.random.random()*100
-
 		rand_dataset_selected = np.random.choice(len(eps))
 		# print("Epsilon (ε) : "+str(rand_eps_val))
 		for x in range(0,len(eps)):
-			dataset_selected[x] = np.argmax([curr_set.avg_data_quality for curr_set in my_datasets_copies[x]])
+			dataset_selected[x] = np.argmax([curr_set.avg_data_quality + np.sqrt(2*np.log(i+1+len(eps)*(total_num_of_sets)) / curr_set.N) for curr_set in my_datasets_copies[x]])
 			data[x][i] = my_datasets_copies[x][int(dataset_selected[x])].get_data()
 			my_datasets_copies[x][int(dataset_selected[x])].update_set_params(data[x][i])
-
 
 	for x in range(0,len(eps)):		
 		series_avg_accuracy = np.cumsum(data[x]) / (np.arange(num_of_tries) + 1)
@@ -84,9 +87,8 @@ def exp(total_num_of_sets, num_of_good_sets, num_of_tries, eps, max_data_quality
 
 
 
-
 def print_data_for_user(total_num_of_sets, num_of_good_sets, num_of_tries, eps, max_data_quality, min_data_quality, variance):
-	print("A simple experiment demonstrating epsilon-greedy, optimistic initial value algorithm")
+	print("A simple experiment demonstrating epsilon-greedy with chernoff hoeffding bound")
 	print("-----------------Default values-----------------")
 	print("Number of datasets: "+str(total_num_of_sets))
 	print("Number of good datasets: "+str(num_of_good_sets))
