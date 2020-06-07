@@ -9,7 +9,7 @@ class my_data:
 
 	def get_data(self):
 		print("Data quality : "+str(self.data_quality))	
-		return np.random.randn() + self.data_quality # gaussian with unit variance
+		return self.data_quality - np.random.randn() # gaussian with unit variance
 
 	def update_set_params(self, new_data_val):# latest sample received from the exp
 		self.N += 1
